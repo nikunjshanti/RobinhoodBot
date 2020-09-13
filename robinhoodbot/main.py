@@ -1,12 +1,8 @@
-import robin_stocks as r
-import pandas as pd
-import numpy as np
 import ta as ta
 from pandas.plotting import register_matplotlib_converters
-from ta import *
 from misc import *
 from tradingstats import *
-from config import *
+from robinhoodhelper.config import *
 
 #Log in to Robinhood
 #Put your username and password in a config.py file in the same directory (see sample file)
@@ -22,12 +18,16 @@ def get_watchlist_symbols():
     """
     my_list_names = []
     symbols = []
-    for name in r.get_all_watchlists(info='name'):
-        my_list_names.append(name)
+    watchlist = r.get_all_watchlists(info="results")
+    if watchlist is not None:
+        #print(json.dumps(watchlist))
+        for list in watchlist:
+            my_list_names.append(list['display_name'])
     for name in my_list_names:
         list = r.get_watchlist_by_name(name)
-        for item in list:
-            instrument_data = r.get_instrument_by_url(item.get('instrument'))
+        for item in list['results']:
+            #print(item)
+            instrument_data = item
             symbol = instrument_data['symbol']
             symbols.append(symbol)
     return symbols
@@ -165,10 +165,11 @@ def golden_cross(stockTicker, n1, n2, days, direction=""):
     """
     if(direction == "above" and not five_year_check(stockTicker)):
         return False
-    history = r.get_historicals(stockTicker,span='year',bounds='regular')
+    history = r.get_stock_historicals(stockTicker,span='year',bounds='regular')
     closingPrices = []
     dates = []
     for item in history:
+        print(item)
         closingPrices.append(float(item['close_price']))
         dates.append(item['begins_at'])
     price = pd.Series(closingPrices)
@@ -247,13 +248,43 @@ def scan_stocks():
     print("Current Portfolio: " + str(portfolio_symbols) + "\n")
     print("Current Watchlist: " + str(watchlist_symbols) + "\n")
     print("----- Scanning portfolio for stocks to sell -----\n")
+
+    history = r.get_stock_historicals(['AAPL'],interval="5minute", span="day", bounds="extended")
+
+    #print(json.dumps(history))
+
+    with open('apple.json', 'w', encoding='utf-8') as f:
+        json.dump(history, f, ensure_ascii=False, indent=4)
+
+    history = r.get_stock_historicals(['AAPL'], interval="10minute", span="day", bounds="extended")
+
+    #get the lastest price
+    appl = r.get_latest_price(['AAPL'])
+    print(appl)
+
+    #buy order
+    #appl_buy = r.order_buy_limit("AAPL", 1, 200.0, "gfd", True)
+    #print(appl_buy)
+
+    #sell order
+    #appl_sell = r.order_sell_limit("AAPL", 1, 1000.0, "gfd", True)
+    #print(appl_sell)
+
+    #todayprice = r.stocks.get_stock_historicals(['AAPL'], interval='hour', span='day', bounds="extended")
+    #print(todayprice)
+
+    '''
     for symbol in portfolio_symbols:
         cross = golden_cross(symbol, n1=50, n2=200, days=30, direction="below")
         if(cross == -1):
             sell_holdings(symbol, holdings_data)
             sells.append(symbol)
     profile_data = r.build_user_profile()
+    '''
+
     print("\n----- Scanning watchlist for stocks to buy -----\n")
+
+    '''
     for symbol in watchlist_symbols:
         if(symbol not in portfolio_symbols):
             cross = golden_cross(symbol, n1=50, n2=200, days=10, direction="above")
@@ -266,6 +297,23 @@ def scan_stocks():
     print("----- Scan over -----\n")
     if debug:
         print("----- DEBUG MODE -----\n")
+    '''
 
 #execute the scan
 scan_stocks()
+
+'''
+import yfinance as yf
+
+msft = yf.Ticker("MSFT")
+
+# get stock info
+#print(msft.info)
+
+# get historical market data
+#hist = msft.history(period="1d", interval="1m", prepost=True)
+hist = yf.download("MSFT", period="1d", interval="1m", prepost=True)
+
+print(hist)
+
+'''
